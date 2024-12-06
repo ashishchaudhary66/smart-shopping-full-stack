@@ -107,16 +107,6 @@ const App = () => {
     }
   };
 
-  const fetchBackend = async() => {
-    const url=API_BASE_URL.replace('/api/v1','');
-    try {
-      const response=await axios.get(url);
-      setBackendActive(true);
-    } catch (error) {
-      setBackendActive(false);
-    }
-  }
-
   useEffect(() => {
     // Check if token exists in cookies
     const token = Cookies.get("token");
@@ -135,15 +125,6 @@ const App = () => {
       navigate("/login");
     }
   }, [login]);
-
-  useEffect(()=>{
-    if(!isBackendActive){
-      fetchBackend();
-    }
-  })
-  if(!isBackendActive){
-    return <Spinner />;
-  }
 
   return (
     <div>
