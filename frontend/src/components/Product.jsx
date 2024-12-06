@@ -46,7 +46,6 @@ const Product = ({item}) => {
       toast.error("No token found. Please log in.");
       return;
     }
-    toast.success("item added to cart")
     const userData = decodeToken(token);
     try {
 
@@ -65,6 +64,7 @@ const Product = ({item}) => {
       const result = await response.json();
 
       if (response.ok) {
+        toast.success("item added to cart")
         addToCart();
       } else {
           // Handle error from the server
@@ -83,7 +83,6 @@ const Product = ({item}) => {
       toast.error("No token found. Please log in.");
       return;
     }
-    toast.success("item removed from cart")
     const userData = decodeToken(token);
     try {
 
@@ -102,6 +101,7 @@ const Product = ({item}) => {
       const result = await response.json();
 
       if (response.ok) {
+        toast.success("item removed from cart")
         removeFromCart();
       } else {
           // Handle error from the server
@@ -120,7 +120,8 @@ const Product = ({item}) => {
       toast.error("No token found. Please log in.");
       return;
     }
-    toast.success("item added to wishlist")
+    toast.success("item added to wishlist");
+    addToWishlist();
     const userData = decodeToken(token);
     try {
 
@@ -138,12 +139,11 @@ const Product = ({item}) => {
 
       const result = await response.json();
 
-      if (response.ok) {
-        addToWishlist();
-      } else {
-          // Handle error from the server
-          toast.error(result.message || "failed to add wishlist");
-          console.error("wishlist addition failed:", result);
+      if (!response.ok) {
+        removeFromCart();
+        // Handle error from the server
+        toast.error(result.message || "failed to add wishlist");
+        console.error("wishlist addition failed:", result);
       }
     } catch (error) {
         toast.error("Something went wrong. Please try again.");
@@ -157,7 +157,8 @@ const Product = ({item}) => {
       toast.error("No token found. Please log in.");
       return;
     }
-    toast.success("item removed from wishlist")
+    toast.success("item removed from wishlist");
+    removeFromWishlist();
     const userData = decodeToken(token);
     try {
 
@@ -174,15 +175,14 @@ const Product = ({item}) => {
       });
 
       const result = await response.json();
-
-      if (response.ok) {
-        removeFromWishlist();
-      } else {
-          // Handle error from the server
-          toast.error(result.message || "failed to remove wishlist");
-          console.error("wishlist remove failed:", result);
+      if (!response.ok) {
+         addToWishlist();
+         // Handle error from the server
+         toast.error(result.message || "failed to remove wishlist");
+         console.error("wishlist remove failed:", result);
       }
     } catch (error) {
+        addToWishlist();
         toast.error("Something went wrong. Please try again.");
         console.error("Error:", error);
     }

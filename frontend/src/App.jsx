@@ -17,12 +17,15 @@ import { jwtDecode } from "jwt-decode";
 import OrderHistory from "./pages/OrderHistory";
 import Checkout from "./pages/Checkout";
 import UserDetails from "./pages/UserDetails";
+import axios from "axios";
+import Spinner from "./components/Spinner";
 
 const App = () => {
   const dispatch = useDispatch();
   const login = useSelector((state) => state.login.value);
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [isBackendActive,setBackendActive] = useState(false);
   const API_BASE_URL = process.env.REACT_APP_BASE_URL;
 
   async function fetchWishlist() {
@@ -42,9 +45,10 @@ const App = () => {
       });
       if (response.ok) {
         const wishlistData = await response.json();
-        wishlistData.wishlist.products.map((item) => {
-          dispatch(addWishlist(item));
-        });
+        for(let i=0;i<wishlistData.wishlist.products.length;i++){
+          let value = wishlistData.wishlist.products[i];
+          dispatch(addWishlist(value));
+        }
       } else {
         console.error("error while fetching wishlist data ");
       }
@@ -71,9 +75,10 @@ const App = () => {
       });
       if (response.ok) {
         const cartData = await response.json();
-        cartData.cart.products.map((item) => {
-          dispatch(add(item));
-        });
+        for(let i=0;i<cartData.cart.products.length;i++){
+          let value = cartData.cart.products[i];
+          dispatch(add(value));
+        }
       } else {
         console.error("error while fetching cart data ");
       }
@@ -102,6 +107,16 @@ const App = () => {
     }
   };
 
+  const fetchBackend = async() => {
+    const url=API_BASE_URL.replace('/api/v1','');
+    try {
+      const response=await axios.get(url);
+      setBackendActive(true);
+    } catch (error) {
+      setBackendActive(false);
+    }
+  }
+
   useEffect(() => {
     // Check if token exists in cookies
     const token = Cookies.get("token");
@@ -120,6 +135,15 @@ const App = () => {
       navigate("/login");
     }
   }, [login]);
+
+  useEffect(()=>{
+    if(!isBackendActive){
+      fetchBackend();
+    }
+  })
+  if(!isBackendActive){
+    return <Spinner />;
+  }
 
   return (
     <div>
