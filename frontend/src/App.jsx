@@ -17,15 +17,12 @@ import { jwtDecode } from "jwt-decode";
 import OrderHistory from "./pages/OrderHistory";
 import Checkout from "./pages/Checkout";
 import UserDetails from "./pages/UserDetails";
-import axios from "axios";
-import Spinner from "./components/Spinner";
 
 const App = () => {
   const dispatch = useDispatch();
   const login = useSelector((state) => state.login.value);
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [isBackendActive,setBackendActive] = useState(false);
   const API_BASE_URL = process.env.REACT_APP_BASE_URL;
 
   async function fetchWishlist() {
