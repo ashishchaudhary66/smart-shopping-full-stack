@@ -1,6 +1,7 @@
 const User = require("../models/userModel");
 const Product = require("../models/productModel");
 const Transaction = require("../models/transactionModel");
+const Cart = require("../models/cartModel");
 
 exports.buyProduct = async (req, res) => {
   try {
@@ -42,6 +43,12 @@ exports.buyProduct = async (req, res) => {
       email: email?.trim().toLowerCase() || user.email,
       totalPrice,
     });
+    // Keep the persisted cart in sync after the order has been recorded.
+    try {
+      await Cart.findOneAndUpdate({ userId }, { $set: { products: [] } });
+    } catch (cartError) {
+      console.error("Order saved but cart cleanup failed:", cartError);
+    }
     return res.status(201).json({ message: "Transaction successful.", transaction });
   } catch (error) {
     console.error("Transaction error:", error);

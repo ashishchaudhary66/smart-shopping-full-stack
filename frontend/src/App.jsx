@@ -60,7 +60,7 @@ const App = () => {
     }
     loadSession();
     return () => { active = false; };
-  }, [dispatch]);
+  }, [dispatch, login]);
 
   if (checkingSession) return <div className="p-8 text-center">Loading...</div>;
 
