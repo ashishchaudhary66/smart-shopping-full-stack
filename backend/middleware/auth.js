@@ -1,37 +1,30 @@
-const jwt=require("jsonwebtoken")
-require("dotenv").config();
+const jwt = require("jsonwebtoken");
 
-exports.auth=(req,res,next)=>{
-    try{
-        const token=req.body.token || req.cookies.token || req.header("Authorization").replace("Bearer ","");
+exports.auth = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  const bearerToken = authorization?.startsWith("Bearer ")
+    ? authorization.slice(7).trim()
+    : null;
+  const token = req.cookies?.token || bearerToken;
 
-        if(!token){
-            return res.status(404).json({
-                success:false,
-                message:"Token Missing"
-            })
-        }
+  if (!token) {
+    return res.status(401).json({ success: false, message: "Authentication required." });
+  }
+  if (!process.env.JWT_SECRET) {
+    console.error("JWT_SECRET is not configured.");
+    return res.status(500).json({ success: false, message: "Authentication is temporarily unavailable." });
+  }
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    return next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: "Invalid or expired session." });
+  }
+};
 
-        //verify the token
-        try{
-            const payload=jwt.verify(token,process.env.JWT_SECRET);
-
-            req.user=payload;
-
-        }catch(error){
-            return res.status(401).json({
-                success:false,
-                message:'token is invalid'
-            })
-        }
-        next();
-
-    }catch(error){
-        console.log("Auth error: ",error)
-        res.status(500).json({
-            success:false,
-            message:'Internal server error',
-            error:error.message
-        })
-    }
-}
+exports.requireAdmin = (req, res, next) => {
+  if (req.user?.role !== "Admin") {
+    return res.status(403).json({ success: false, message: "Administrator access required." });
+  }
+  return next();
+};
