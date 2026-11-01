@@ -4,105 +4,51 @@ const Transaction = require("../models/transactionModel");
 
 exports.buyProduct = async (req, res) => {
   try {
-    const { userId, products,name, email ,address, totalPrice } = req.body;
-
-    // Fetch user
+    const { products, name, email, address } = req.body;
+    const userId = req.user._id;
+    if (!Array.isArray(products) || products.length === 0 || !address?.trim()) {
+      return res.status(400).json({ message: "A valid product list and shipping address are required." });
+    }
     const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user || user.isDeleted) return res.status(404).json({ message: "User not found." });
 
-    let totalPriceCal = 0; // Variable to calculate total price
-    const productsToUpdate = [];
-
-    for (let productItem of products) {
-      const { productId, quantity } = productItem;
-
-      // Fetch product
-      const product = await Product.findById(productId);
-      if (!product || product.isDeleted) {
-        return res
-          .status(404)
-          .json({ message: `Product ${productId} not found or deleted` });
+    const purchasedProducts = [];
+    let totalPrice = 0;
+    for (const item of products) {
+      const quantity = Number(item.quantity);
+      if (!item.productId || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 99) {
+        return res.status(400).json({ message: "Each product must have a valid ID and quantity between 1 and 99." });
       }
-
-      totalPriceCal += product.price * quantity;
+      const product = await Product.findOne({ _id: item.productId, isDeleted: false });
+      if (!product) return res.status(404).json({ message: `Product ${item.productId} not found.` });
+      totalPrice += product.price * quantity;
+      purchasedProducts.push({ productId: product._id, quantity });
     }
-
-    // Save product updates
-    await Promise.all(productsToUpdate.map((product) => product.save()));
-
-    // Calculate final totalPrice (use provided value if valid; otherwise, use calculated price)
-    let finalTotalPrice =
-      totalPrice && totalPrice > 0 ? totalPrice : totalPriceCal;
-    finalTotalPrice = preciseRound(finalTotalPrice, 2);
-    // Create transaction
-    const transaction = new Transaction({
-      transactionId: `TXN${Date.now()}`, // Unique transaction ID
+    totalPrice = Math.round((totalPrice + Number.EPSILON) * 100) / 100;
+    const transaction = await Transaction.create({
+      transactionId: `TXN${Date.now()}`,
       userId,
-      products: products.map((productItem) => ({
-        productId: productItem.productId,
-        quantity: productItem.quantity,
-      })),
-      address,
-      name: name || user.name,
-      email: email || user.email,
-      totalPrice: finalTotalPrice,
+      products: purchasedProducts,
+      address: address.trim(),
+      name: name?.trim() || user.name,
+      email: email?.trim().toLowerCase() || user.email,
+      totalPrice,
     });
-
-    await transaction.save();
-
-    res.status(200).json({ message: "Transaction successful", transaction });
+    return res.status(201).json({ message: "Transaction successful.", transaction });
   } catch (error) {
     console.error("Transaction error:", error);
-    res
-      .status(500)
-      .json({ message: "Transaction failed", error: error.message });
+    return res.status(500).json({ message: "Transaction failed." });
   }
 };
 
 exports.getTransactionHistory = async (req, res) => {
-  const { userId } = req.params; // Get userId from the request parameters
-
   try {
-    // Fetch transactions for the given userId
-    const transactions = await Transaction.find({ userId })
-      .populate("products.productId") // Populate product details (optional fields: title, price)
-      .exec();
-
-    // Check if transactions exist
-    if (!transactions || transactions.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No transactions found." });
-    }
-
-    // Send the transactions as the response
-    res.status(200).json(transactions);
+    const transactions = await Transaction.find({ userId: req.user._id })
+      .populate("products.productId")
+      .sort({ date: -1 });
+    return res.status(200).json(transactions);
   } catch (error) {
-    console.error("Error fetching transaction history:", error);
-    res
-      .status(500)
-      .json({
-        message: "An error occurred while fetching transaction history.",
-      });
+    console.error("Transaction history error:", error);
+    return res.status(500).json({ message: "Unable to fetch transaction history." });
   }
 };
-
-function preciseRound(num, decimalPlaces = 0) {
-  const factor = Math.pow(10, decimalPlaces);
-  return Math.round((num + Number.EPSILON) * factor) / factor;
-}
-
-function formatToIST(utcDate) {
-  const date = new Date(utcDate);
-  return new Intl.DateTimeFormat("en-IN", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(date);
-}
