@@ -1,5 +1,5 @@
 const express = require("express");
-const { signup, login, logout } = require("../controller/userController");
+const { signup, login, logout, currentUser } = require("../controller/userController");
 const { addProducts, displayProducts, softDeleteProduct } = require("../controller/productController");
 const { getTransactionHistory, buyProduct } = require("../controller/buyProductController");
 const { addToWishlist, removeFromWishlist, getWishlist } = require("../controller/wishlistController");
@@ -9,6 +9,7 @@ const router = express.Router();
 
 router.post("/signup", signup);
 router.post("/login", login);
+router.get("/me", auth, currentUser);
 router.post("/logout", auth, logout);
 
 router.post("/addProducts", auth, requireAdmin, addProducts);
