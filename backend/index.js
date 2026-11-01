@@ -1,30 +1,39 @@
-const express = require('express')
+const express = require("express");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 require("dotenv").config();
+
 const app = express();
 const port = process.env.PORT || 4001;
+const allowedOrigins = (process.env.FRONTEND_DOMAIN || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
-const corsOptions = {
-  origin: process.env.FRONTEND_DOMAIN, 
-  methods: ["GET", "POST", "PUT"],
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Origin is not allowed by CORS."));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
-};
-
-app.use(cors(corsOptions));
-app.use(express.json());
+}));
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
-require("./database/connection").dbConnect();
+app.use("/api/v1", require("./routes/userRoute"));
+app.get("/", (req, res) => res.send("Welcome to Smart Shopping"));
 
-const smartShopping=require("./routes/userRoute")
-app.use("/api/v1",smartShopping);
+async function startServer() {
+  try {
+    await require("./database/connection").dbConnect();
+    app.listen(port, () => console.log(`Smart Shopping API listening on port ${port}`));
+  } catch (error) {
+    console.error("Unable to start application:", error);
+    process.exit(1);
+  }
+}
 
-app.get('/', (req, res) => {
-  res.send('<h1 style="text-align:center">Welcome to Smart Shopping</h1>')
-})
-
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
+if (require.main === module) startServer();
+module.exports = app;
