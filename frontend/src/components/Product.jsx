@@ -15,30 +15,26 @@ const Product = ({ item }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  async function updateCollection(path, productId, successMessage, action) {
+  async function updateCollection(path, payload, successMessage, action) {
     try {
       const response = await fetch(`${API}${path}`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
+        body: JSON.stringify({ productId: item._id }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Request failed");
-      dispatch(action(productId === item._id ? item._id : productId));
+      dispatch(action(payload));
       toast.success(successMessage);
     } catch (error) {
       toast.error(error.message || "Something went wrong. Please try again.");
     }
   }
 
-  const handleAddToCart = () => isLogin
-    ? updateCollection("/cart/add", item._id, "Item added to cart", add)
-    : navigate("/login");
+  const handleAddToCart = () => isLogin ? updateCollection("/cart/add", item, "Item added to cart", add) : navigate("/login");
   const handleRemoveFromCart = () => updateCollection("/cart/remove", item._id, "Item removed from cart", remove);
-  const handleAddToWishlist = () => isLogin
-    ? updateCollection("/wishlist/add", item._id, "Item added to wishlist", addWishlist)
-    : navigate("/login");
+  const handleAddToWishlist = () => isLogin ? updateCollection("/wishlist/add", item, "Item added to wishlist", addWishlist) : navigate("/login");
   const handleRemoveFromWishlist = () => updateCollection("/wishlist/remove", item._id, "Item removed from wishlist", removeWishlist);
 
   return (
