@@ -21,8 +21,16 @@ exports.buyProduct = async (req, res) => {
       }
       const product = await Product.findOne({ _id: item.productId, isDeleted: false });
       if (!product) return res.status(404).json({ message: `Product ${item.productId} not found.` });
-      totalPrice += product.price * quantity;
-      purchasedProducts.push({ productId: product._id, quantity });
+      const lineTotal = Math.round((product.price * quantity + Number.EPSILON) * 100) / 100;
+      totalPrice += lineTotal;
+      purchasedProducts.push({
+        productId: product._id,
+        quantity,
+        title: product.title,
+        image: product.image,
+        unitPrice: product.price,
+        lineTotal,
+      });
     }
     totalPrice = Math.round((totalPrice + Number.EPSILON) * 100) / 100;
     const transaction = await Transaction.create({
@@ -43,9 +51,7 @@ exports.buyProduct = async (req, res) => {
 
 exports.getTransactionHistory = async (req, res) => {
   try {
-    const transactions = await Transaction.find({ userId: req.user._id })
-      .populate("products.productId")
-      .sort({ date: -1 });
+    const transactions = await Transaction.find({ userId: req.user._id }).sort({ date: -1 });
     return res.status(200).json(transactions);
   } catch (error) {
     console.error("Transaction history error:", error);
